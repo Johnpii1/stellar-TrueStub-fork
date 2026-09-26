@@ -1,8 +1,5 @@
 /**
  * Jest tests for OwnershipTransferService atomic workflow — issue #154
- *
- * Covers: initiate, accept, cancel, duplicate transferId guard,
- * double-finalise guard, and concurrent access atomicity.
  */
 
 import {

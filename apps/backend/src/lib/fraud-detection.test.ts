@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { fingerprintListing, checkForDuplicateListing, type ExistingListing } from "./fraud-detection";
 
 describe("fingerprintListing", () => {

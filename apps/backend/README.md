@@ -30,7 +30,19 @@ this workspace is where their actual implementation lands.
     silently failing — fix the constraint name in
     `src/routes/sync-user.ts` once someone with real schema access confirms
     it.
+- `POST /webhooks/escrow-status` → the **single authoritative write path**
+  for escrow status (`escrow_transactions.status`). Requires a valid
+  HMAC-SHA256 signature of the raw body keyed with
+  `TRUSTLESS_WORK_WEBHOOK_SECRET` (`x-trustless-work-signature`,
+  `x-webhook-signature` or `x-signature`), maps the Trustless Work status via
+  `STATUS_MAP` (unknown statuses → 400), updates the row by `contractId`
+  through `HasuraService.updateEscrowStatus`, then sends notifications via
+  `NotificationService`. A failed write answers 500 so Trustless Work retries.
+  `apps/frontend`'s `src/app/webhooks/escrow-status/route.ts` is a pass-through
+  that forwards the signed payload here unchanged.
 - Express + TypeScript, `tsx` for the dev watcher, plain `tsc` build.
+- Tests are Jest, named `*.test.ts` next to the code they cover
+  (`yarn workspace @truestub/backend test`).
 - `src/config/env.ts` — the one place environment variables get read.
 
 ## Running it
@@ -50,6 +62,52 @@ Firebase console → Project settings → Service accounts → Generate new
 private key. The Hasura admin secret must **only** ever live here, never in
 `apps/frontend` — see the security note in
 [`apps/frontend/README.md`](../frontend/README.md#-3-hasura-graphql).
+
+## Database migrations
+
+SQL migrations live in `src/db/migrations/` and are applied with
+[node-pg-migrate](https://salsita.github.io/node-pg-migrate/), which records
+what has run in a `pgmigrations` table in the target database. It connects
+using `DATABASE_URL` (read from the environment or `apps/backend/.env`).
+
+```bash
+docker-compose up -d postgres                   # from the repo root, or point at any Postgres
+export DATABASE_URL=postgres://postgres:postgrespassword@localhost:5432/safetrust
+yarn workspace @truestub/backend migrate:up     # apply all pending migrations
+```
+
+| Command | What it does |
+| --- | --- |
+| `migrate:up` | Apply every pending migration, in filename order |
+| `migrate:down` | Roll back the most recently applied migration |
+| `migrate:create <name>` | Scaffold a new `src/db/migrations/<timestamp>_<name>.sql` |
+| `migrate up --dry-run` | Print the SQL without running it |
+
+Each `.sql` file holds a `-- Up Migration` section and an optional
+`-- Down Migration` section. Filenames must sort in the order they should
+run (`--check-order` rejects out-of-order files), so continue the existing
+numeric prefix (e.g. `002_rename_hotels_to_events.sql`) or use
+`migrate:create`. `001_create_ratings_reviews.sql` uses `IF NOT EXISTS`, so
+it's safe to run against a database where it was already applied by hand.
+The Docker image ships the migrations directory too, so a deployed container
+can run `yarn workspace @truestub/backend migrate:up` with `DATABASE_URL` set.
+
+## Refunds
+
+`POST /api/refunds/claim` executes a refund on-chain: it resolves the
+escrow's dispute through Trustless Work, paying 100% of `amount` to
+`refundTo`. The backend signs as the platform's dispute resolver and submits
+the transaction to Stellar. The response returns `claim.status: "submitted"`
+and the Stellar `claim.txHash`. `refundId` is an idempotency key: a second
+call returns 409, unless the first on-chain attempt failed, in which case the
+call retries it.
+
+Requires `TRUSTLESS_WORK_API_KEY` and `TRUSTLESS_WORK_DISPUTE_RESOLVER_SECRET`
+(see `.env.example`); without them the route returns 503. The escrow must
+already be in dispute, the resolver key must match the escrow's
+`disputeResolver` role, and `amount` must equal the disputed balance.
+Trustless Work and the contract reject the transaction otherwise, and the
+route returns 502 with the reason.
 
 ## Observability
 
@@ -79,7 +137,7 @@ end" of the URL it's calling:
 | `src/app/api/auth/sync-user/route.ts` | `BACKEND_URL` | ✅ Done — see "Current scope" above |
 | `src/app/api/auth/reset-password/route.ts` | `BACKEND_URL` | Complete a password reset |
 | `src/app/api/auth/forgot-password/route.ts` | `NEXT_PUBLIC_WEBHOOK_URL` | Kick off the forgot-password flow |
-| `src/app/webhooks/escrow-status/route.ts` | `TRUSTLESS_WORK_WEBHOOK_SECRET`-verified webhook | Verify the Trustless Work HMAC signature and call `updateEscrowStatus` (currently a stub in `src/lib/server/hasura.ts`, throws "not implemented") |
+| `src/app/webhooks/escrow-status/route.ts` | `BACKEND_URL` | ✅ Done — see "Current scope" above |
 
 The rest of that logic hasn't moved here yet. When it does, update the
 frontend's `BACKEND_URL` / `NEXT_PUBLIC_WEBHOOK_URL` env vars to point at
