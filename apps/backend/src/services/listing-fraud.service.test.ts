@@ -27,9 +27,8 @@ describe("listing fraud risk checks", () => {
       sellerId: "SELLER-1",
     };
 
-    assert.equal(
-      ticketListingFingerprint(messyListing),
-      ticketListingFingerprint(baseListing),
+    expect(ticketListingFingerprint(messyListing)).toBe(
+      ticketListingFingerprint(baseListing)
     );
   });
 
@@ -39,9 +38,9 @@ describe("listing fraud risk checks", () => {
       [baseListing],
     );
 
-    assert.equal(result.duplicate, true);
-    assert.equal(result.riskLevel, "high");
-    assert.equal(result.matches.length, 1);
+    expect(result.duplicate).toBe(true);
+    expect(result.riskLevel).toBe("high");
+    expect(result.matches).toHaveLength(1);
   });
 
   it("allows different seats for legitimate multi-ticket sellers", () => {
@@ -50,8 +49,8 @@ describe("listing fraud risk checks", () => {
       [baseListing],
     );
 
-    assert.equal(result.duplicate, false);
-    assert.equal(result.matches.length, 0);
+    expect(result.duplicate).toBe(false);
+    expect(result.matches).toHaveLength(0);
   });
 
   it("ignores inactive historical listings", () => {
@@ -60,6 +59,6 @@ describe("listing fraud risk checks", () => {
       [{ ...baseListing, status: "sold" }],
     );
 
-    assert.equal(result.duplicate, false);
+    expect(result.duplicate).toBe(false);
   });
 });
