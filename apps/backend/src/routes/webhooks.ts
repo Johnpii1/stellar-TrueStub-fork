@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { Sentry } from "../lib/sentry";
 import { NotificationService } from "../services/notification.service";
 import { HasuraService } from "../services/hasura.service";
 
@@ -54,10 +55,30 @@ function verifySignature(rawBody: Buffer, signature: string, secret: string): bo
   }
 }
 
+/**
+ * Surface a retryable delivery failure to the on-call channel immediately.
+ *
+ * Trustless Work retries a 5xx response, but this integration does not receive
+ * a separate "retries exhausted" callback. Capturing each retryable failure
+ * gives the on-call alert time to repair the write path before that happens.
+ * Do not attach the request body: it can contain recipient PII.
+ */
+function captureDeliveryFailure(err: unknown, contractId?: string): void {
+  Sentry.captureException(err, {
+    tags: {
+      alert: "webhook.delivery_failure",
+      webhook: "escrow-status",
+      retryable: "true",
+    },
+    ...(contractId ? { extra: { contractId } } : {}),
+  });
+}
+
 webhookRouter.post("/escrow-status", async (req: Request, res: Response) => {
   const secret = env.TRUSTLESS_WORK_WEBHOOK_SECRET;
   if (!secret) {
     logger.error("[webhook:escrow-status] TRUSTLESS_WORK_WEBHOOK_SECRET is not configured");
+    captureDeliveryFailure(new Error("TRUSTLESS_WORK_WEBHOOK_SECRET is not configured"));
     return res.status(500).json({ error: "Webhook secret is not configured" });
   }
 
@@ -74,8 +95,17 @@ webhookRouter.post("/escrow-status", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid webhook signature" });
   }
 
-  const { contractId, engagementId, status, amount, currency, recipientEmail, recipientName, recipientPushToken, role } =
-    req.body || {};
+  const {
+    contractId,
+    engagementId,
+    status,
+    amount,
+    currency,
+    recipientEmail,
+    recipientName,
+    recipientPushToken,
+    role,
+  } = req.body || {};
 
   // escrow_transactions is keyed by contract_id — engagementId alone can't
   // identify the row to update.
@@ -89,20 +119,27 @@ webhookRouter.post("/escrow-status", async (req: Request, res: Response) => {
     return res.status(400).json({ error: `Unknown status: ${status}` });
   }
 
-  const resolvedEngagementId = typeof engagementId === "string" && engagementId ? engagementId : contractId;
+  const resolvedEngagementId =
+    typeof engagementId === "string" && engagementId ? engagementId : contractId;
 
   let rowsUpdated: number;
   try {
-    ({ affected_rows: rowsUpdated } = await HasuraService.updateEscrowStatus(contractId, normalizedStatus));
+    ({ affected_rows: rowsUpdated } = await HasuraService.updateEscrowStatus(
+      contractId,
+      normalizedStatus
+    ));
   } catch (err) {
     // Non-2xx so Trustless Work retries the delivery.
     logger.error({ err, contractId }, "[webhook:escrow-status] Failed to update escrow status");
+    captureDeliveryFailure(err, contractId);
     return res.status(500).json({ error: "Failed to sync escrow status" });
   }
 
   // The status write is what matters; a notification failure must not make
   // Trustless Work retry (and re-apply) an update that already landed.
-  let notifications: Awaited<ReturnType<typeof NotificationService.notifyEscrowStatusChange>> | null = null;
+  let notifications: Awaited<
+    ReturnType<typeof NotificationService.notifyEscrowStatusChange>
+  > | null = null;
   try {
     notifications = await NotificationService.notifyEscrowStatusChange({
       escrowId: resolvedEngagementId,

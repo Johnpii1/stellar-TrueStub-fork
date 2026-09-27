@@ -119,6 +119,34 @@ NEXT_PUBLIC_TRUSTLESS_NETWORK=testnet
 
 ---
 
+#### 🔌 Backend service URLs
+
+The frontend has two names for the same `apps/backend` service because the
+callers run in different security contexts:
+
+```bash
+# Server-only: Next.js route handlers forward webhook/auth traffic here.
+BACKEND_URL=http://localhost:4000
+
+# Browser-visible: client-side code calls only public, user-safe endpoints here.
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+```
+
+- Use **`BACKEND_URL`** from Next.js server code only (for example,
+  `src/app/api/**/route.ts` and `src/app/webhooks/**/route.ts`). It is not
+  embedded in the browser bundle, so it may use an internal hostname such as
+  `http://backend:4000`.
+- Use **`NEXT_PUBLIC_BACKEND_URL`** only from code that can run in the browser
+  (for example, the client-side saved-search/watchlist store in
+  `src/lib/listing-alerts-api.ts`). Next.js exposes every `NEXT_PUBLIC_*`
+  value to users at build time, so it must be a publicly reachable URL and
+  must never contain credentials, an admin secret, or a private network host.
+- In a typical deployment both URLs reach the same backend service. They can
+  differ when the server can use private networking but a browser needs the
+  public origin. Set both whenever a feature uses both contexts.
+
+---
+
 #### 🗄️ 3. Hasura GraphQL
 
 ```bash
@@ -153,6 +181,10 @@ NEXT_PUBLIC_TRUSTLESS_NETWORK=testnet
 
 # Hasura GraphQL (a reachable endpoint; NO admin secret here, ever)
 NEXT_PUBLIC_HASURA_GRAPHQL_URL=https://your-hasura-instance.example.com/v1/graphql
+
+# Backend service: server-only proxy routes vs. browser-side API calls
+BACKEND_URL=http://localhost:4000
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
 ```
 
 ---
