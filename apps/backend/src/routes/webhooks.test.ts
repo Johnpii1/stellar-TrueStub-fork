@@ -5,10 +5,17 @@ import request from "supertest";
 const WEBHOOK_SECRET = "test-webhook-secret";
 
 jest.mock("../config/env", () => ({
-  env: { TRUSTLESS_WORK_WEBHOOK_SECRET: "test-webhook-secret", NODE_ENV: "test", LOG_LEVEL: "silent" },
+  env: {
+    TRUSTLESS_WORK_WEBHOOK_SECRET: "test-webhook-secret",
+    NODE_ENV: "test",
+    LOG_LEVEL: "silent",
+  },
 }));
 jest.mock("../lib/logger", () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
+jest.mock("../lib/sentry", () => ({
+  Sentry: { captureException: jest.fn() },
 }));
 jest.mock("../services/hasura.service", () => ({
   HasuraService: { updateEscrowStatus: jest.fn() },
@@ -22,6 +29,7 @@ import { captureRawBody } from "../middleware/rawBody";
 import { HasuraService } from "../services/hasura.service";
 import { NotificationService } from "../services/notification.service";
 import { webhookRouter } from "./webhooks";
+import { Sentry } from "../lib/sentry";
 
 const updateEscrowStatus = HasuraService.updateEscrowStatus as jest.Mock;
 const notifyEscrowStatusChange = NotificationService.notifyEscrowStatusChange as jest.Mock;
@@ -52,10 +60,21 @@ const payload = JSON.stringify({
 });
 
 describe("POST /webhooks/escrow-status", () => {
+  const captureException = Sentry.captureException as jest.Mock;
+
   beforeEach(() => {
-    (env as { TRUSTLESS_WORK_WEBHOOK_SECRET?: string }).TRUSTLESS_WORK_WEBHOOK_SECRET = WEBHOOK_SECRET;
+    captureException.mockClear();
+  });
+  beforeEach(() => {
+    (env as { TRUSTLESS_WORK_WEBHOOK_SECRET?: string }).TRUSTLESS_WORK_WEBHOOK_SECRET =
+      WEBHOOK_SECRET;
     updateEscrowStatus.mockResolvedValue({ affected_rows: 1 });
-    notifyEscrowStatusChange.mockResolvedValue({ emailSent: true, pushSent: false, channel: "email", timestamp: "t" });
+    notifyEscrowStatusChange.mockResolvedValue({
+      emailSent: true,
+      pushSent: false,
+      channel: "email",
+      timestamp: "t",
+    });
   });
 
   it("updates escrow status by contractId and notifies for a validly signed payload", async () => {
@@ -65,7 +84,11 @@ describe("POST /webhooks/escrow-status", () => {
     expect(updateEscrowStatus).toHaveBeenCalledTimes(1);
     expect(updateEscrowStatus).toHaveBeenCalledWith("contract-123", "completed");
     expect(notifyEscrowStatusChange).toHaveBeenCalledWith(
-      expect.objectContaining({ contractId: "contract-123", engagementId: "ENG-001", status: "completed" })
+      expect.objectContaining({
+        contractId: "contract-123",
+        engagementId: "ENG-001",
+        status: "completed",
+      })
     );
     expect(res.body).toMatchObject({
       success: true,
@@ -102,7 +125,9 @@ describe("POST /webhooks/escrow-status", () => {
   });
 
   it("rejects an invalid signature and does not write", async () => {
-    const res = await post(payload, { "x-trustless-work-signature": sign(payload, "wrong-secret") });
+    const res = await post(payload, {
+      "x-trustless-work-signature": sign(payload, "wrong-secret"),
+    });
 
     expect(res.status).toBe(401);
     expect(updateEscrowStatus).not.toHaveBeenCalled();
@@ -115,6 +140,12 @@ describe("POST /webhooks/escrow-status", () => {
 
     expect(res.status).toBe(500);
     expect(updateEscrowStatus).not.toHaveBeenCalled();
+    expect(captureException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "TRUSTLESS_WORK_WEBHOOK_SECRET is not configured" }),
+      expect.objectContaining({
+        tags: expect.objectContaining({ alert: "webhook.delivery_failure" }),
+      })
+    );
   });
 
   it("rejects a signed payload without contractId", async () => {
@@ -140,6 +171,13 @@ describe("POST /webhooks/escrow-status", () => {
 
     expect(res.status).toBe(500);
     expect(notifyEscrowStatusChange).not.toHaveBeenCalled();
+    expect(captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: expect.objectContaining({ alert: "webhook.delivery_failure", retryable: "true" }),
+        extra: { contractId: "contract-123" },
+      })
+    );
   });
 
   it("still returns 200 when only the notification fails after a successful write", async () => {
