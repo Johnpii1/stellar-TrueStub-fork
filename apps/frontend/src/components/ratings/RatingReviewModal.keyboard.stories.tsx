@@ -20,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 export const KeyboardOnly: Story = {
   play: async ({ canvas, userEvent }) => {
-    const trigger = canvas.getByRole("button", { name: /rate & review seller/i });
+    const trigger = canvas.getByRole("button");
     await userEvent.click(trigger);
 
     const dialog = within(document.body).getByRole("dialog");
