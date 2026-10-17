@@ -1,6 +1,7 @@
 "use client";
 
 import { StarRating } from "./StarRating";
+import { useTranslation } from "react-i18next";
 import { ShieldCheck, ThumbsUp, Award } from "lucide-react";
 import type { UserReputationSummary as ReputationSummaryType } from "@/types/ratings";
 
@@ -13,6 +14,7 @@ export function UserReputationSummary({
   reputation,
   compact = false,
 }: UserReputationSummaryProps) {
+  const { t } = useTranslation();
   const rep: ReputationSummaryType = reputation || {
     user_id: "default",
     total_reviews: 28,
@@ -42,11 +44,11 @@ export function UserReputationSummary({
       <div className="flex items-center justify-between border-b pb-3">
         <div className="flex items-center gap-2">
           <Award className="h-5 w-5 text-yellow-500" />
-          <h3 className="text-base font-semibold text-foreground">Reputation & Trust Score</h3>
+          <h3 className="text-base font-semibold text-foreground">{t("ratings.reputation")}</h3>
         </div>
         <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
           <ShieldCheck className="h-3.5 w-3.5" />
-          <span>Verified Trader</span>
+          <span>{t("ratings.verifiedTrader")}</span>
         </div>
       </div>
 
@@ -57,7 +59,7 @@ export function UserReputationSummary({
           </span>
           <StarRating rating={rep.average_rating} size="sm" className="mt-1" />
           <span className="text-xs text-muted-foreground mt-1">
-            Based on {rep.total_reviews} reviews
+            {t("ratings.basedOn", { count: rep.total_reviews })}
           </span>
         </div>
 
@@ -67,7 +69,7 @@ export function UserReputationSummary({
             <span>{rep.positive_percentage}%</span>
           </div>
           <span className="text-xs text-muted-foreground mt-1">
-            Positive Feedback Rate
+            {t("ratings.positiveRate")}
           </span>
         </div>
 

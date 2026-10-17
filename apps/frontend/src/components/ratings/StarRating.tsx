@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Star } from "lucide-react";
 
 interface StarRatingProps {
@@ -24,6 +25,7 @@ export function StarRating({
   reviewCount,
   className = "",
 }: StarRatingProps) {
+  const { t } = useTranslation();
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
   const starSizeClasses = {
@@ -91,7 +93,7 @@ export function StarRating({
 
       {reviewCount !== undefined && (
         <span className="text-xs text-muted-foreground">
-          ({reviewCount} {reviewCount === 1 ? "review" : "reviews"})
+          ({t("ratings.reviewCount", { count: reviewCount })})
         </span>
       )}
     </div>

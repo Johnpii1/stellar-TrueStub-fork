@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export function DisputeArbitrationCard({
   onResolve,
   onWithdraw,
 }: DisputeArbitrationCardProps) {
+  const { t } = useTranslation();
   const [pendingAction, setPendingAction] = useState<"escalate" | "resolve" | "withdraw" | null>(null);
 
   const isTerminal = status === "resolved" || status === "withdrawn";
@@ -57,14 +59,14 @@ export function DisputeArbitrationCard({
 
   const statusLabel =
     status === "resolved"
-      ? "Resolved"
+      ? t("disputes.resolved")
       : status === "withdrawn"
-        ? "Withdrawn"
+        ? t("disputes.withdrawn")
         : status === "escalated"
-          ? "Escalated"
+          ? t("disputes.escalated")
           : status === "open"
-            ? "Open"
-            : "Arbitration In Progress";
+            ? t("disputes.open")
+            : t("disputes.inProgress");
 
   return (
     <Card className="border-red-300 dark:border-red-900/60 bg-red-50/30 dark:bg-red-950/10 shadow-sm overflow-hidden">
@@ -72,7 +74,7 @@ export function DisputeArbitrationCard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
             <ShieldAlert className="h-5 w-5" />
-            <CardTitle className="text-base font-semibold">Active On-Chain Dispute & Arbitration</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("disputes.activeDispute")}</CardTitle>
           </div>
           <Badge className="bg-red-600 text-white hover:bg-red-600 border-none uppercase text-[10px] tracking-wider w-fit">
             {statusLabel}
@@ -80,8 +82,8 @@ export function DisputeArbitrationCard({
         </div>
         <CardDescription className="text-xs text-red-600/80 dark:text-red-400/80">
           {isTerminal
-            ? "This dispute has been closed. Escrow fund releases follow the recorded verdict."
-            : "Escrow fund releases are suspended pending arbitrator verdict."}
+            ? t("disputes.disputeClosed")
+            : t("disputes.disputeSuspended")}
         </CardDescription>
       </CardHeader>
 
@@ -89,14 +91,14 @@ export function DisputeArbitrationCard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Dispute Reason
+              {t("disputes.reason")}
             </span>
             <p className="font-medium text-foreground">{disputeReason}</p>
           </div>
 
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Designated Arbitrator
+              {t("disputes.designatedArbitrator")}
             </span>
             <p className="font-mono text-xs text-foreground break-all flex items-center gap-1">
               <Scale className="h-3.5 w-3.5 text-red-500 shrink-0" />
@@ -107,7 +109,7 @@ export function DisputeArbitrationCard({
 
         <div className="space-y-1 bg-background/60 p-3 rounded-lg border border-border">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Claimant Statement
+            {t("disputes.claimantStatement")}
           </span>
           <p className="text-xs text-muted-foreground leading-relaxed mt-1">
             &ldquo;{disputeDescription}&rdquo;
@@ -120,7 +122,7 @@ export function DisputeArbitrationCard({
                 rel="noreferrer"
                 className="text-blue-600 hover:underline inline-flex items-center gap-1"
               >
-                <ExternalLink className="h-3 w-3" /> View Submitted Evidence
+                <ExternalLink className="h-3 w-3" /> {t("disputes.viewEvidence")}
               </a>
             </div>
           )}
@@ -129,20 +131,20 @@ export function DisputeArbitrationCard({
         {/* Timeline */}
         <div className="pt-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
-            Resolution Pipeline
+            {t("disputes.resolutionPipeline")}
           </span>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs border rounded-lg p-3 bg-background/40">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
               <CheckCircle className="h-4 w-4" />
-              <span>1. Dispute Raised ({openedDate})</span>
+              <span>{t("disputes.disputeRaised", { date: openedDate })}</span>
             </div>
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
               <Clock className="h-4 w-4 animate-pulse" />
-              <span>2. Under Arbitrator Review</span>
+              <span>{t("disputes.underReview")}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground font-normal">
               <Scale className="h-4 w-4" />
-              <span>3. Verdict & Fund Distribution</span>
+              <span>{t("disputes.verdictDistribution")}</span>
             </div>
           </div>
         </div>
@@ -151,7 +153,7 @@ export function DisputeArbitrationCard({
         {!isTerminal && (
           <div className="pt-2 border-t border-border space-y-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
-              Dispute Actions
+              {t("disputes.actions")}
             </span>
             <div className="flex flex-wrap gap-2">
               {canEscalate && (
@@ -163,7 +165,7 @@ export function DisputeArbitrationCard({
                   onClick={() => runAction("escalate", onEscalate)}
                 >
                   <ArrowUpCircle className="h-4 w-4 mr-1" />
-                  {pendingAction === "escalate" ? "Escalating..." : "Escalate Dispute"}
+                  {pendingAction === "escalate" ? t("disputes.escalating") : t("disputes.escalate")}
                 </Button>
               )}
               {canResolve && (
@@ -174,7 +176,7 @@ export function DisputeArbitrationCard({
                   onClick={() => runAction("resolve", onResolve)}
                 >
                   <Gavel className="h-4 w-4 mr-1" />
-                  {pendingAction === "resolve" ? "Resolving..." : "Resolve Dispute"}
+                  {pendingAction === "resolve" ? t("disputes.resolving") : t("disputes.resolve")}
                 </Button>
               )}
               {canWithdraw && (
@@ -186,14 +188,14 @@ export function DisputeArbitrationCard({
                   onClick={() => runAction("withdraw", onWithdraw)}
                 >
                   <Undo2 className="h-4 w-4 mr-1" />
-                  {pendingAction === "withdraw" ? "Withdrawing..." : "Withdraw Dispute"}
+                  {pendingAction === "withdraw" ? t("disputes.withdrawing") : t("disputes.withdraw")}
                 </Button>
               )}
             </div>
             {!onEscalate && !onResolve && !onWithdraw && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                No dispute actions are available for your role on this contract.
+                {t("disputes.noActions")}
               </p>
             )}
           </div>

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@apollo/client";
 import { gql } from "@apollo/client";
+import { useTranslation } from "react-i18next";
 import { SellerEarnings } from "@/components/dashboard/SellerEarnings";
 import type { PayoutEscrow } from "@/lib/earnings";
 
@@ -42,6 +43,7 @@ function toPayoutEscrow(row: EscrowRow): PayoutEscrow {
 }
 
 export default function EarningsPage() {
+  const { t } = useTranslation();
   const sellerId = process.env.NEXT_PUBLIC_SELLER_ID;
 
   const { data, loading, error } = useQuery<{ escrow_transactions: EscrowRow[] }>(
@@ -54,20 +56,20 @@ export default function EarningsPage() {
   return (
     <div className="p-6 space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold">Earnings</h1>
+        <h1 className="text-2xl font-bold">{t("earnings.title")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Payouts from completed sales, released from escrow to your wallet.
+          {t("earnings.subtitle")}
         </p>
       </div>
       {loading ? (
-        <p className="text-muted-foreground text-sm">Loading earnings…</p>
+        <p className="text-muted-foreground text-sm">{t("earnings.loading")}</p>
       ) : error ? (
         <p className="text-destructive text-sm">
-          Could not load earnings. Please try again.
+          {t("earnings.error")}
         </p>
       ) : escrows.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          No completed escrows yet. Your released payouts will appear here.
+          {t("earnings.empty")}
         </p>
       ) : (
         <SellerEarnings escrows={escrows} />

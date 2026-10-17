@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StarRating } from "./StarRating";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,7 @@ export function RatingReviewModal({
   onSubmitReview,
   triggerButton,
 }: RatingReviewModalProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -87,7 +89,7 @@ export function RatingReviewModal({
         {triggerButton || (
           <Button variant="outline" className="gap-2 border-yellow-500/50 hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            Rate & Review {role === "buyer" || role === "tenant" ? "Seller" : "Buyer"}
+            {t(role === "buyer" || role === "tenant" ? "ratings.rateSeller" : "ratings.rateBuyer")}
           </Button>
         )}
       </DialogTrigger>
@@ -95,26 +97,26 @@ export function RatingReviewModal({
         {isSubmitted ? (
           <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 animate-in zoom-in-50 duration-300" />
-            <h3 className="text-xl font-semibold">Thank you for your feedback!</h3>
+            <h3 className="text-xl font-semibold">{t("ratings.thankYou")}</h3>
             <p className="text-sm text-muted-foreground">
-              Your rating has been recorded and added to {revieweeName}&apos;s reputation.
+              {t("ratings.recorded", { name: revieweeName })}
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <DialogHeader className="space-y-2">
               <DialogTitle className="text-xl">
-                Rate your transaction with {revieweeName}
+                {t("ratings.transactionTitle", { name: revieweeName })}
               </DialogTitle>
               <DialogDescription>
-                Your feedback helps build trust and reputation in the TrueStub peer-to-peer resale network.
+                {t("ratings.description")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="py-6 space-y-6">
               <div className="flex flex-col items-center justify-center space-y-2 bg-muted/40 p-4 rounded-xl">
                 <Label className="text-sm font-medium text-muted-foreground">
-                  Overall Experience
+                  {t("ratings.overallExperience")}
                 </Label>
                 <StarRating
                   rating={rating}
@@ -123,24 +125,24 @@ export function RatingReviewModal({
                   size="lg"
                 />
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  {rating === 5 && "⭐ Excellent"}
-                  {rating === 4 && "👍 Good"}
-                  {rating === 3 && "👌 Average"}
-                  {rating === 2 && "👎 Poor"}
-                  {rating === 1 && "⚠️ Terrible"}
+                  {rating === 5 && t("ratings.excellent")}
+                  {rating === 4 && t("ratings.good")}
+                  {rating === 3 && t("ratings.average")}
+                  {rating === 2 && t("ratings.poor")}
+                  {rating === 1 && t("ratings.terrible")}
                 </span>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="comment" className="flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  Written Review <span className="text-xs text-muted-foreground">(Optional)</span>
+                  {t("ratings.writtenReview")} <span className="text-xs text-muted-foreground">{t("ratings.optional")}</span>
                 </Label>
                 <Textarea
                   id="comment"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder={`Share details about your experience with ${revieweeName} (e.g. ticket delivery speed, communication, trustworthiness)...`}
+                  placeholder={`${t("ratings.placeholder", { name: revieweeName })}`}
                   className="min-h-[100px] resize-y"
                   maxLength={500}
                 />
@@ -157,14 +159,14 @@ export function RatingReviewModal({
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t("ratings.cancel")}
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isSubmitting ? "Submitting..." : "Submit Review"}
+                {isSubmitting ? t("ratings.submitting") : t("ratings.submit")}
               </Button>
             </DialogFooter>
           </form>

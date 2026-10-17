@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Download, Trash2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
@@ -28,6 +29,7 @@ const ACTIVE_ESCROW_STATUSES = [
 const DELETE_CONFIRMATION_PHRASE = "DELETE";
 
 export function PrivacyDataSection() {
+  const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isCheckingEscrows, setIsCheckingEscrows] = useState(false);
@@ -60,10 +62,10 @@ export function PrivacyDataSection() {
       link.remove();
       URL.revokeObjectURL(url);
 
-      toast.success("Your data export has started downloading.");
+      toast.success(t("privacy.exportSuccess"));
     } catch (error) {
       console.error("Failed to export account data:", error);
-      toast.error("Couldn't export your data. Please try again.");
+      toast.error(t("privacy.exportError"));
     } finally {
       setIsExporting(false);
     }
@@ -118,16 +120,16 @@ export function PrivacyDataSection() {
         throw new Error(data?.error || "Failed to delete account data");
       }
 
-      toast.success("Your account has been deleted.");
+      toast.success(t("privacy.deleteSuccess"));
       setIsDeleteOpen(false);
       window.location.href = "/login";
     } catch (error) {
       console.error("Failed to delete account:", error);
       const code = (error as { code?: string })?.code;
       if (code === "auth/requires-recent-login") {
-        toast.error("Please log out and back in, then try deleting your account again.");
+        toast.error(t("privacy.recentLogin"));
       } else {
-        toast.error("Couldn't delete your account. Please try again.");
+        toast.error(t("privacy.deleteError"));
       }
     } finally {
       setIsDeleting(false);
@@ -138,31 +140,31 @@ export function PrivacyDataSection() {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold mb-3">Privacy & data</h3>
+      <h3 className="text-sm font-semibold mb-3">{t("privacy.title")}</h3>
       <div className="border rounded-lg p-4 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium">Export your data</p>
+            <p className="text-sm font-medium">{t("privacy.exportTitle")}</p>
             <p className="text-xs text-muted-foreground">
-              Download a JSON file of your profile and escrow data.
+              {t("privacy.exportDescription")}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
             <Download className="mr-2 h-4 w-4" />
-            {isExporting ? "Preparing…" : "Export data"}
+            {isExporting ? t("privacy.exportPreparing") : t("privacy.exportButton")}
           </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t">
           <div>
-            <p className="text-sm font-medium text-destructive">Delete account</p>
+            <p className="text-sm font-medium text-destructive">{t("privacy.deleteTitle")}</p>
             <p className="text-xs text-muted-foreground">
-              Permanently delete your account. This cannot be undone.
+              {t("privacy.deleteDescription")}
             </p>
           </div>
           <Button variant="destructive" size="sm" onClick={handleOpenDelete}>
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete account
+            {t("privacy.deleteTitle")}
           </Button>
         </div>
       </div>
@@ -181,16 +183,16 @@ export function PrivacyDataSection() {
             <DialogTitle>Delete account</DialogTitle>
             <DialogDescription id="delete-confirmation-help">
               {isCheckingEscrows
-                ? "Checking for active escrows…"
+                ? t("privacy.checking")
                 : hasBlockingEscrows
-                ? "You have active or unresolved escrows. Please wait until they complete or are cancelled before deleting your account."
-                : `This action cannot be undone. Type "${DELETE_CONFIRMATION_PHRASE}" to confirm.`}
+                ? t("privacy.blocked")
+                : t("privacy.deleteWarning", { phrase: DELETE_CONFIRMATION_PHRASE })}
             </DialogDescription>
           </DialogHeader>
 
           {!isCheckingEscrows && !hasBlockingEscrows && (
             <div className="space-y-1.5">
-              <Label htmlFor="delete-confirmation">Confirmation</Label>
+              <Label htmlFor="delete-confirmation">{t("privacy.confirmation")}</Label>
               <Input
                 id="delete-confirmation"
                 value={confirmationText}
@@ -218,7 +220,7 @@ export function PrivacyDataSection() {
                 }
                 onClick={handleConfirmDelete}
               >
-                {isDeleting ? "Deleting…" : "Delete account"}
+                {isDeleting ? t("privacy.deleting") : t("privacy.deleteTitle")}
               </Button>
             )}
           </DialogFooter>

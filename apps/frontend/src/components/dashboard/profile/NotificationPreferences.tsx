@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type NotificationPreferenceKey =
   | "offers"
@@ -18,23 +19,23 @@ const PREFERENCE_OPTIONS: {
 }[] = [
   {
     key: "offers",
-    label: "Offers on my listings",
-    description: "When a buyer makes or updates an offer on a ticket you listed.",
+    label: "notificationPreferences.offers",
+    description: "notificationPreferences.offersDescription",
   },
   {
     key: "escrowUpdates",
-    label: "Escrow status updates",
-    description: "When an escrow is funded, a ticket is transferred, or funds are released.",
+    label: "notificationPreferences.escrowUpdates",
+    description: "notificationPreferences.escrowUpdatesDescription",
   },
   {
     key: "savedListingPriceDrops",
-    label: "Price drops on saved listings",
-    description: "When the price of a listing you saved goes down.",
+    label: "notificationPreferences.savedListingPriceDrops",
+    description: "notificationPreferences.savedListingPriceDropsDescription",
   },
   {
     key: "eventReminders",
-    label: "Event reminders",
-    description: "A reminder before an event you hold tickets for.",
+    label: "notificationPreferences.eventReminders",
+    description: "notificationPreferences.eventRemindersDescription",
   },
 ];
 
@@ -81,6 +82,7 @@ const UPDATE_NOTIFICATION_PREFERENCES = /* GraphQL */ `
 `;
 
 export function NotificationPreferences() {
+  const { t } = useTranslation();
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -158,7 +160,7 @@ export function NotificationPreferences() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <h2 className="text-lg font-semibold mb-4">Email notifications</h2>
+      <h2 className="text-lg font-semibold mb-4">{t("notificationPreferences.title")}</h2>
 
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-5">
         {PREFERENCE_OPTIONS.map(({ key, label, description }) => (
@@ -171,9 +173,9 @@ export function NotificationPreferences() {
             />
             <div>
               <Label htmlFor={`notify-${key}`} className="font-medium">
-                {label}
+                {t(label)}
               </Label>
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="text-sm text-muted-foreground">{t(description)}</p>
             </div>
           </div>
         ))}
@@ -184,7 +186,7 @@ export function NotificationPreferences() {
             disabled={isSaving}
             className="bg-orange-500 hover:bg-orange-600 text-white"
           >
-            {isSaving ? "Saving..." : "Save preferences"}
+            {isSaving ? t("notificationPreferences.saving") : t("notificationPreferences.save")}
           </Button>
         </div>
       </div>

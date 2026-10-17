@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StarRating } from "./StarRating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,10 +55,11 @@ const STUB_REVIEWS: Review[] = [
 
 export function ReviewsList({
   reviews = STUB_REVIEWS,
-  title = "Recent Reviews & Feedback",
-  emptyMessage = "No reviews yet.",
+  title,
+  emptyMessage,
   pageSize = DEFAULT_PAGE_SIZE,
 }: ReviewsListProps) {
+  const { t } = useTranslation();
   const items = reviews.length > 0 ? reviews : STUB_REVIEWS;
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const visibleItems = items.slice(0, visibleCount);
@@ -67,14 +69,14 @@ export function ReviewsList({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          {title} ({items.length})
+          {title || t("ratings.recentReviews")} ({items.length})
         </h4>
       </div>
 
       {items.length === 0 ? (
         <div className="text-center py-6 text-sm text-muted-foreground bg-muted/20 rounded-xl border border-dashed">
           <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
-          {emptyMessage}
+          {emptyMessage || t("ratings.noReviews")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -90,7 +92,7 @@ export function ReviewsList({
                   </div>
                   <div>
                     <span className="font-medium text-sm text-foreground">
-                      {review.reviewer_name || "Verified Trader"}
+                      {review.reviewer_name || t("ratings.verifiedTrader")}
                     </span>
                     <Badge variant="secondary" className="ml-2 text-[10px] capitalize font-normal">
                       {review.role}
@@ -123,7 +125,7 @@ export function ReviewsList({
                 size="sm"
                 onClick={() => setVisibleCount((count) => count + pageSize)}
               >
-                Load more ({items.length - visibleCount} remaining)
+                {t("ratings.loadMore", { count: items.length - visibleCount })}
               </Button>
             </div>
           )}
