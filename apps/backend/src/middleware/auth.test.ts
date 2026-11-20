@@ -6,13 +6,16 @@ jest.mock("../lib/firebase-admin", () => ({
   firebaseAuth: { verifyIdToken: (token: string) => verifyIdToken(token) },
 }));
 
-import { requireAuth, requireAuthForWrites } from "./auth";
+import { requireAdmin, requireAuth, requireAuthForWrites } from "./auth";
 
 function buildApp() {
   const app = express();
   app.use(express.json());
   app.use("/protected", requireAuth, (_req, res) => res.json({ user: res.locals.user }));
   app.use("/writes", requireAuthForWrites, (_req, res) => res.json({ ok: true }));
+  app.use("/admin/store-status", requireAdmin, (_req, res) =>
+    res.json({ openDisputes: 3, pendingRefunds: 2 }),
+  );
   return app;
 }
 
@@ -50,5 +53,33 @@ describe("requireAuthForWrites", () => {
   it("rejects unauthenticated writes with 401", async () => {
     const res = await request(buildApp()).post("/writes").send({});
     expect(res.status).toBe(401);
+  });
+});
+
+describe("requireAdmin", () => {
+  beforeEach(() => verifyIdToken.mockReset());
+
+  it("rejects an authenticated non-admin with 403 before returning store data", async () => {
+    verifyIdToken.mockResolvedValue({ uid: "buyer-1", role: "user" });
+
+    const res = await request(buildApp())
+      .get("/admin/store-status")
+      .set("Authorization", "Bearer valid-user-token");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "Administrator access is required" });
+    expect(res.body).not.toHaveProperty("openDisputes");
+    expect(res.body).not.toHaveProperty("pendingRefunds");
+  });
+
+  it("allows an authenticated admin to access store status", async () => {
+    verifyIdToken.mockResolvedValue({ uid: "admin-1", role: "admin" });
+
+    const res = await request(buildApp())
+      .get("/admin/store-status")
+      .set("Authorization", "Bearer valid-admin-token");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ openDisputes: 3, pendingRefunds: 2 });
   });
 });
